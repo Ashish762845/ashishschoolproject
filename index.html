@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart School | Next-Gen Education</title>
+    <script src="http://localhost:5000/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --secondary: #8b5cf6;
+            --accent: #f43f5e;
+            --bg: #0f172a;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(244, 63, 94, 0.05) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in { animation: fadeIn 0.5s ease forwards; }
+
+        /* --- Auth Pages --- */
+        .auth-container {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .auth-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            padding: 40px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .auth-card h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .auth-card p {
+            color: var(--text-dim);
+            margin-bottom: 32px;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.875rem;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+            margin-left: 4px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: white;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .text-link {
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            margin-top: 16px;
+            display: inline-block;
+            transition: var(--transition);
+        }
+
+        .text-link:hover { color: var(--secondary); }
+
+        /* --- Dashboard Layout --- */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: rgba(0, 0, 0, 0.2);
+            border-right: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            padding: 32px 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 48px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--primary);
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--glass);
+            color: var(--text-main);
+        }
+
+        .nav-item.active {
+            border-left: 3px solid var(--primary);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+        }
+
+        .main-content {
+            padding: 40px;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .welcome h1 { font-size: 2rem; margin-bottom: 4px; }
+        .welcome p { color: var(--text-dim); }
+
+        .role-badge {
+            padding: 6px 12px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        /* --- Grid & Cards --- */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 24px;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        /* --- List Styles --- */
+        ul { list-style: none; }
+        li {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid transparent;
+            transition: var(--transition);
+        }
+        li:hover { border-color: var(--glass-border); background: rgba(0, 0, 0, 0.2); }
+
+        /* --- Helpers --- */
+        .hidden { display: none !important; }
+        
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: #1e293b;
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .dashboard { grid-template-columns: 1fr; }
+            .sidebar { display: none; } /* Simplified for now */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- --- AUTH: LOGIN --- -->
+    <div id="loginPage" class="auth-container">
+        <div class="auth-card">
+            <i data-lucide="graduation-cap" style="width: 48px; height: 48px; color: var(--primary); margin-bottom: 16px;"></i>
+            <h1>Smart School</h1>
+            <p>Enter your credentials to continue</p>
+            
+            <div class="input-group">
+                <label>Email Address</label>
+                <input id="email" type="email" placeholder="admin@gmail.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input id="password" type="password" placeholder="••••••••">
+            </div>
+            
+            <button onclick="login()">
+                <i data-lucide="log-in"></i> Sign In
+            </button>
+            
+            <span class="text-link" onclick="showSignup()">Don't have an account? Create one</span>
+        </div>
+    </div>
+
+    <!-- --- AUTH: SIGNUP --- -->
+    <div id="signupPage" class="auth-container hidden">
+        <div class="auth-card">
+            <h1>Create Account</h1>
+            <p>Join the future of education</p>
+            
+            <div class="input-group">
+                <label>Full Name</label>
+                <input id="sname" placeholder="John Doe">
+            </div>
+            <div class="input-group">
+                <label>Email Address</label>
+                <input id="semail" type="email" placeholder="john@example.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input id="spassword" type="password">
+            </div>
+            <div class="input-group">
+                <label>I am a...</label>
+                <select id="srole">
+                    <option value="teacher">Teacher</option>
+                    <option value="student">Student</option>
+                    <option value="parent">Parent</option>
+                </select>
+            </div>
+            
+            <button onclick="signup()">
+                <i data-lucide="user-plus"></i> Register
+            </button>
+            
+            <span class="text-link" onclick="showLogin()">Already have an account? Login</span>
+        </div>
+    </div>
+
+    <!-- --- DASHBOARD --- -->
+    <div id="dashboard" class="dashboard hidden">
+        
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <i data-lucide="shield-check"></i> SmartSchool
+            </div>
+            
+            <nav>
+                <div class="nav-item active">
+                    <i data-lucide="layout-dashboard"></i> Overview
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button onclick="logout()" style="background: rgba(244, 63, 94, 0.1); color: var(--accent); border: 1px solid rgba(244, 63, 94, 0.2);">
+                    <i data-lucide="log-out"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <div class="header">
+                <div class="welcome">
+                    <h1 id="userNameDisplay">Welcome back!</h1>
+                    <p id="roleTitle">School Management Portal</p>
+                </div>
+                <div class="role-badge" id="roleBadge">Role</div>
+            </div>
+
+            <!-- ADMIN PANEL -->
+            <div id="adminPanel" class="hidden fade-in">
+                <div class="grid">
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="school"></i></div> Schools</h3>
+                        <div class="input-group">
+                            <input id="schoolName" placeholder="New School Name">
+                        </div>
+                        <button onclick="addSchool()">Add School</button>
+                    </div>
+
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="user-plus"></i></div> Quick Add User</h3>
+                        <input id="newName" placeholder="Full Name" style="margin-bottom: 10px;">
+                        <input id="newEmail" placeholder="Email" style="margin-bottom: 10px;">
+                        <input id="newPassword" type="password" placeholder="Password" style="margin-bottom: 10px;">
+                        <select id="newRole" style="margin-bottom: 15px;">
+                            <option value="teacher">Teacher</option>
+                            <option value="student">Student</option>
+                            <option value="parent">Parent</option>
+                        </select>
+                        <button onclick="addUser()">Create User</button>
+                    </div>
+
+                    <div class="card" style="grid-column: span 1;">
+                        <h3><div class="card-icon"><i data-lucide="users"></i></div> System Users</h3>
+                        <button onclick="loadUsers()" style="margin-bottom: 15px;">Refresh List</button>
+                        <ul id="userList"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TEACHER PANEL -->
+            <div id="teacherPanel" class="hidden fade-in">
+                <div class="grid">
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="award"></i></div> Grading</h3>
+                        <input id="studentId" placeholder="Student ID" style="margin-bottom: 10px;">
+                        <input id="subject" placeholder="Subject" style="margin-bottom: 10px;">
+                        <input id="marks" type="number" placeholder="Marks" style="margin-bottom: 15px;">
+                        <button onclick="uploadMarks()">Post Marks</button>
+                    </div>
+
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="check-circle"></i></div> Attendance</h3>
+                        <input id="attStudentId" placeholder="Student ID" style="margin-bottom: 10px;">
+                        <select id="status" style="margin-bottom: 15px;">
+                            <option>Present</option>
+                            <option>Absent</option>
+                        </select>
+                        <button onclick="markAttendance()">Submit Attendance</button>
+                    </div>
+
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="file-up"></i></div> Assignments</h3>
+                        <input type="file" id="fileUpload" style="margin-bottom: 15px;">
+                        <button onclick="uploadFile()">Upload File</button>
+                        <ul id="fileList" style="margin-top: 15px;"></ul>
+                    </div>
+
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="message-square"></i></div> PTM Requests</h3>
+                        <button onclick="loadPTM()" style="margin-bottom: 15px;">Check Messages</button>
+                        <ul id="ptmList" style="margin-bottom: 15px;"></ul>
+                        <div style="border-top: 1px solid var(--glass-border); padding-top: 15px;">
+                            <input id="ptmId" placeholder="Request ID" style="margin-bottom: 10px;">
+                            <textarea id="replyMsg" placeholder="Type your reply here..." rows="3"></textarea>
+                            <button onclick="replyPTM()" style="margin-top: 10px;">Send Reply</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STUDENT PANEL -->
+            <div id="studentPanel" class="hidden fade-in">
+                <div class="grid">
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="files"></i></div> My Assignments</h3>
+                        <button onclick="loadFiles()" style="margin-bottom: 15px;">View Files</button>
+                        <ul id="fileListStudent"></ul>
+                    </div>
+
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="trending-up"></i></div> Performance Overview</h3>
+                        <button onclick="getAnalysis()" style="margin-bottom: 15px;">Analyze Grades</button>
+                        <div id="analysis" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">---</div>
+                    </div>
+
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="bar-chart-3"></i></div> Grade Distribution</h3>
+                        <canvas id="chart"></canvas>
+                        <button onclick="loadChart()" style="margin-top: 15px;">Update Chart</button>
+                    </div>
+
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="brain-circuit"></i></div> AI Academic Insights</h3>
+                        <button onclick="predictAI()" style="margin-bottom: 15px;">Generate AI Insights</button>
+                        <p id="aiResult" style="font-weight: 600;"></p>
+                    </div>
+                    
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="activity"></i></div> Stats</h3>
+                        <button onclick="advancedAnalysis()">Load Stats</button>
+                        <p id="advAnalysis" style="margin-top: 10px;"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PARENT PANEL -->
+            <div id="parentPanel" class="hidden fade-in">
+                <div class="grid">
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="user"></i></div> Child's Progress</h3>
+                        <div class="input-group">
+                            <label>Student ID</label>
+                            <input id="pStudentId" placeholder="Enter Child's Student ID (e.g. 3)">
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px; margin-top: 10px;">
+                            <button onclick="viewScore()">View Marks</button>
+                            <button onclick="viewAttendance()">View Attendance</button>
+                        </div>
+                        <ul id="scoreList"></ul>
+                        <ul id="attendanceList"></ul>
+                    </div>
+
+
+                    <div class="card">
+                        <h3><div class="card-icon"><i data-lucide="users"></i></div> Book PTM</h3>
+                        <input type="date" id="date" style="margin-bottom: 10px;">
+                        <textarea id="msg" placeholder="Message to teacher..." rows="3" style="margin-bottom: 15px;"></textarea>
+                        <button onclick="bookPTM()">Schedule Meeting</button>
+                        
+                        <div style="margin-top: 20px; border-top: 1px solid var(--glass-border); padding-top: 20px;">
+                            <button onclick="loadMyPTM()">View Status</button>
+                            <ul id="myPtmList" style="margin-top: 15px;"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const API = "http://localhost:5000";
+        const socket = io(API);
+        let currentUser = JSON.parse(localStorage.getItem("user")) || {};
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            if (currentUser.id) {
+                applyUserRole(currentUser);
+            }
+        });
+
+        socket.on("notification", (msg) => {
+            showMsg("🔔 " + msg);
+        });
+
+        function showMsg(msg) {
+            const toast = document.createElement("div");
+            toast.className = "toast";
+            toast.innerHTML = `<i data-lucide="bell" style="width: 18px; height: 18px;"></i> ${msg}`;
+            document.body.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transform = "translateX(20px)";
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function validateFields(fields) {
+            for (let i = 0; i < fields.length; i++) {
+                if (!fields[i] || fields[i].value.trim() === "") {
+                    showMsg("Please fill all fields");
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function login() {
+            const emailInput = document.getElementById("email");
+            const passwordInput = document.getElementById("password");
+
+            if (!validateFields([emailInput, passwordInput])) return;
+
+            fetch(API + "/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: emailInput.value, password: passwordInput.value })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    currentUser = d.user;
+                    localStorage.setItem("user", JSON.stringify(d.user));
+                    applyUserRole(d.user);
+                    showMsg("Welcome back, " + d.user.name);
+                } else {
+                    showMsg(d.error || "Invalid Login");
+                }
+            })
+            .catch(() => showMsg("Server connection failed"));
+        }
+
+        function applyUserRole(user) {
+            document.getElementById("loginPage").classList.add("hidden");
+            document.getElementById("signupPage").classList.add("hidden");
+            document.getElementById("dashboard").classList.remove("hidden");
+            
+            document.getElementById("userNameDisplay").innerText = "Welcome back, " + user.name + "!";
+            document.getElementById("roleBadge").innerText = user.role;
+            
+            const panels = ["adminPanel", "teacherPanel", "studentPanel", "parentPanel"];
+            panels.forEach(p => document.getElementById(p).classList.add("hidden"));
+            
+            const activePanel = user.role + "Panel";
+            if (document.getElementById(activePanel)) {
+                document.getElementById(activePanel).classList.remove("hidden");
+            }
+            
+            if (user.role === "admin") loadUsers();
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        function showSignup() {
+            document.getElementById("loginPage").classList.add("hidden");
+            document.getElementById("signupPage").classList.remove("hidden");
+        }
+
+        function showLogin() {
+            document.getElementById("signupPage").classList.add("hidden");
+            document.getElementById("loginPage").classList.remove("hidden");
+        }
+
+        function signup() {
+            const sname = document.getElementById("sname");
+            const semail = document.getElementById("semail");
+            const spassword = document.getElementById("spassword");
+            const srole = document.getElementById("srole");
+
+            if (!validateFields([sname, semail, spassword])) return;
+
+            fetch(API + "/signup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: sname.value,
+                    email: semail.value,
+                    password: spassword.value,
+                    role: srole.value
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showMsg("Account created! You can now login.");
+                    showLogin();
+                } else {
+                    showMsg(data.error || "Signup Failed");
+                }
+            })
+            .catch(() => showMsg("Error creating account"));
+        }
+
+        /* --- Admin --- */
+        function addSchool() {
+            const schoolName = document.getElementById("schoolName");
+            if (!validateFields([schoolName])) return;
+            fetch(API + "/school", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: schoolName.value })
+            }).then(() => {
+                showMsg("School added successfully");
+                schoolName.value = "";
+            });
+        }
+
+        function addUser() {
+            const newName = document.getElementById("newName");
+            const newEmail = document.getElementById("newEmail");
+            const newPassword = document.getElementById("newPassword");
+            const newRole = document.getElementById("newRole");
+
+            if (!validateFields([newName, newEmail, newPassword])) return;
+
+            fetch(API + "/signup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: newName.value,
+                    email: newEmail.value,
+                    password: newPassword.value,
+                    role: newRole.value
+                })
+            })
+            .then(r => r.json())
+            .then(() => {
+                showMsg("User added to system");
+                newName.value = ""; newEmail.value = ""; newPassword.value = "";
+                loadUsers();
+            });
+        }
+
+        function loadUsers() {
+            fetch(API + "/users")
+            .then(r => r.json())
+            .then(data => {
+                const userList = document.getElementById("userList");
+                userList.innerHTML = "";
+                data.forEach(u => {
+                    let li = document.createElement("li");
+                    li.innerHTML = `<span>${u.name}</span> <span class="role-badge" style="font-size: 0.6rem;">${u.role}</span>`;
+                    userList.appendChild(li);
+                });
+            });
+        }
+
+        /* --- Teacher --- */
+        function uploadMarks() {
+            const studentId = document.getElementById("studentId");
+            const subject = document.getElementById("subject");
+            const marks = document.getElementById("marks");
+            if (!validateFields([studentId, subject, marks])) return;
+            fetch(API + "/marks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ student_id: studentId.value, subject: subject.value, marks: marks.value })
+            }).then(() => {
+                showMsg("Marks posted successfully");
+                studentId.value = ""; subject.value = ""; marks.value = "";
+            });
+        }
+
+        function markAttendance() {
+            const attStudentId = document.getElementById("attStudentId");
+            const status = document.getElementById("status");
+            if (!validateFields([attStudentId])) return;
+            fetch(API + "/attendance", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ student_id: attStudentId.value, status: status.value })
+            }).then(() => {
+                showMsg("Attendance recorded");
+                attStudentId.value = "";
+            });
+        }
+
+        function uploadFile() {
+            const fileUpload = document.getElementById("fileUpload");
+            let file = fileUpload.files[0];
+            if (!file) { showMsg("Select a file first"); return; }
+            let reader = new FileReader();
+            reader.onload = function () {
+                fetch(API + "/upload", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: file.name, file: reader.result })
+                }).then(() => {
+                    showMsg("Assignment uploaded");
+                    fileUpload.value = "";
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function loadPTM() {
+            fetch(API + "/ptm")
+            .then(r => r.json())
+            .then(data => {
+                const ptmList = document.getElementById("ptmList");
+                ptmList.innerHTML = "";
+                data.forEach(p => {
+                    let li = document.createElement("li");
+                    li.innerHTML = `<div><strong>ID: ${p.id}</strong><br><small>${p.date}</small></div> <div>${p.message}</div>`;
+                    ptmList.appendChild(li);
+                });
+                showMsg("PTM requests loaded");
+            });
+        }
+
+        function replyPTM() {
+            const ptmId = document.getElementById("ptmId");
+            const replyMsg = document.getElementById("replyMsg");
+            if (!validateFields([ptmId, replyMsg])) return;
+            fetch(API + "/ptm/reply", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: ptmId.value, reply: replyMsg.value })
+            }).then(() => {
+                showMsg("Reply sent");
+                ptmId.value = ""; replyMsg.value = "";
+                loadPTM();
+            });
+        }
+
+        /* --- Student --- */
+        function loadFiles() {
+            fetch(API + "/files")
+            .then(r => r.json())
+            .then(data => {
+                const list = document.getElementById("fileListStudent");
+                list.innerHTML = "";
+                data.forEach(f => {
+                    let li = document.createElement("li");
+                    li.innerHTML = `<a href="${f.file}" download="${f.name}" style="color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="download"></i> ${f.name}
+                    </a>`;
+                    list.appendChild(li);
+                });
+                lucide.createIcons();
+            });
+        }
+
+        function getAnalysis() {
+            fetch(API + "/marks/" + currentUser.id)
+            .then(r => r.json())
+            .then(data => {
+                const div = document.getElementById("analysis");
+                if (data.length === 0) { div.innerText = "No marks found"; return; }
+                let avg = data.reduce((a, b) => a + Number(b.marks), 0) / data.length;
+                div.innerText = avg.toFixed(1) + " / 100";
+            });
+        }
+
+        function loadChart() {
+            fetch(API + "/marks/" + currentUser.id)
+            .then(r => r.json())
+            .then(data => {
+                if (data.length === 0) return showMsg("No data for chart");
+                const ctx = document.getElementById("chart").getContext('2d');
+                if (window.myChart) window.myChart.destroy();
+                window.myChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => d.subject),
+                        datasets: [{
+                            label: 'Your Grades',
+                            data: data.map(d => d.marks),
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.05)' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            });
+        }
+
+        function predictAI() {
+            fetch(API + "/marks/" + currentUser.id)
+            .then(r => r.json())
+            .then(data => {
+                const res = document.getElementById("aiResult");
+                if (data.length === 0) { res.innerText = "Insufficient data"; return; }
+                let avg = data.reduce((a, b) => a + Number(b.marks), 0) / data.length;
+                let prediction = avg > 85 ? "Excellent! You're on track for Honors. 🚀" : 
+                             avg > 70 ? "Good work. Focus on consistent practice. 👍" : 
+                             avg > 50 ? "Steady progress. Consider extra tutoring for weak subjects. ⚠️" :
+                             "Warning: Academic probation risk. Please meet your advisor. ❗";
+                res.innerText = prediction;
+            });
+        }
+
+        function advancedAnalysis() {
+            fetch(API + "/marks/" + currentUser.id)
+            .then(r => r.json())
+            .then(data => {
+                const p = document.getElementById("advAnalysis");
+                if (data.length === 0) return p.innerText = "No data";
+                let marks = data.map(d => Number(d.marks));
+                let max = Math.max(...marks);
+                let min = Math.min(...marks);
+                p.innerHTML = `High Score: <span style="color: #10b981">${max}</span> | Low Score: <span style="color: #ef4444">${min}</span>`;
+            });
+        }
+
+        /* --- Parent --- */
+        function viewScore() {
+            const sid = document.getElementById("pStudentId").value;
+            if(!sid) return showMsg("Please enter Student ID");
+            
+            fetch(API + "/marks/" + sid)
+            .then(r => r.json())
+            .then(data => {
+                const list = document.getElementById("scoreList");
+                list.innerHTML = "";
+                if(data.length === 0) showMsg("No marks found for this ID");
+                data.forEach(m => {
+                    let li = document.createElement("li");
+                    li.innerHTML = `<span>${m.subject}</span> <strong>${m.marks}</strong>`;
+                    list.appendChild(li);
+                });
+            });
+        }
+
+        function viewAttendance() {
+            const sid = document.getElementById("pStudentId").value;
+            if(!sid) return showMsg("Please enter Student ID");
+
+            fetch(API + "/attendance/" + sid)
+            .then(r => r.json())
+            .then(data => {
+                const list = document.getElementById("attendanceList");
+                list.innerHTML = "";
+                if(data.length === 0) showMsg("No attendance found for this ID");
+                data.forEach(a => {
+                    let li = document.createElement("li");
+                    let color = a.status === 'Present' ? '#10b981' : '#ef4444';
+                    li.innerHTML = `<span>${a.date}</span> <span style="color: ${color}; font-weight: 700;">${a.status}</span>`;
+                    list.appendChild(li);
+                });
+            });
+        }
+
+
+        function bookPTM() {
+            const date = document.getElementById("date");
+            const msg = document.getElementById("msg");
+            if (!validateFields([date, msg])) return;
+            fetch(API + "/ptm", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ parent_id: currentUser.id, message: msg.value, date: date.value })
+            }).then(() => {
+                showMsg("PTM scheduled successfully");
+                date.value = ""; msg.value = "";
+            });
+        }
+
+        function loadMyPTM() {
+            fetch(API + "/ptm/" + currentUser.id)
+            .then(r => r.json())
+            .then(data => {
+                const list = document.getElementById("myPtmList");
+                list.innerHTML = "";
+                data.forEach(p => {
+                    let li = document.createElement("li");
+                    li.innerHTML = `<div><strong>${p.date}</strong><br><small>Teacher: ${p.reply || "Awaiting reply..."}</small></div>`;
+                    list.appendChild(li);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
