@@ -11,6 +11,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static(__dirname)); // Serve static files (index.html, etc.)
 
 const db = new sqlite3.Database("school.db", (err) => {
   if (err) {
@@ -167,8 +168,10 @@ app.get("/attendance/:id", (req, res) => {
   db.all("SELECT * FROM attendance WHERE student_id=?",
     [req.params.id],
     (err, result) => {
-      if (err) return handleError(res, err, "Get Attendance");
-      res.json(result);
+      if (err, result) {
+        if (err) return handleError(res, err, "Get Attendance");
+        res.json(result);
+      }
     });
 });
 
@@ -260,6 +263,7 @@ app.post("/ptm/reply", (req, res) => {
 // 🚀 SERVER
 // ===================================================
 
-server.listen(5000, () => {
-  console.log("🚀 Server running on http://localhost:5000");
-});
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});

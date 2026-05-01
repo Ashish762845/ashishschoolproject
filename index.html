@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart School | Next-Gen Education</title>
-    <script src="http://localhost:5000/socket.io/socket.io.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -549,7 +549,7 @@
     </div>
 
     <script>
-        const API = "http://localhost:5000";
+        const API = window.location.origin;
         const socket = io(API);
         let currentUser = JSON.parse(localStorage.getItem("user")) || {};
 
