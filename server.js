@@ -168,10 +168,8 @@ app.get("/attendance/:id", (req, res) => {
   db.all("SELECT * FROM attendance WHERE student_id=?",
     [req.params.id],
     (err, result) => {
-      if (err, result) {
-        if (err) return handleError(res, err, "Get Attendance");
-        res.json(result);
-      }
+      if (err) return handleError(res, err, "Get Attendance");
+      res.json(result || []);
     });
 });
 
