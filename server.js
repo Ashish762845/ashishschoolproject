@@ -18,8 +18,74 @@ const db = new sqlite3.Database("school.db", (err) => {
     console.error("❌ SQLite Error:", err.message);
   } else {
     console.log("✅ SQLite Connected");
+    initializeDatabase();
   }
 });
+
+function initializeDatabase() {
+  db.serialize(() => {
+    // Users Table
+    db.run(`CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      role TEXT NOT NULL
+    )`);
+
+    // School Table
+    db.run(`CREATE TABLE IF NOT EXISTS school (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL
+    )`);
+
+    // Marks Table
+    db.run(`CREATE TABLE IF NOT EXISTS marks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      subject TEXT NOT NULL,
+      marks INTEGER NOT NULL,
+      FOREIGN KEY (student_id) REFERENCES users(id)
+    )`);
+
+    // Attendance Table
+    db.run(`CREATE TABLE IF NOT EXISTS attendance (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      date TEXT NOT NULL,
+      FOREIGN KEY (student_id) REFERENCES users(id)
+    )`);
+
+    // PTM Table
+    db.run(`CREATE TABLE IF NOT EXISTS ptm (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      parent_id INTEGER NOT NULL,
+      date TEXT NOT NULL,
+      message TEXT NOT NULL,
+      reply TEXT DEFAULT NULL,
+      FOREIGN KEY (parent_id) REFERENCES users(id)
+    )`);
+
+    // Files Table
+    db.run(`CREATE TABLE IF NOT EXISTS files (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      file TEXT NOT NULL
+    )`);
+
+    // Insert Default Admin if not exists
+    db.get("SELECT * FROM users WHERE email = 'admin@gmail.com'", (err, row) => {
+      if (!row) {
+        db.run("INSERT INTO users (name, email, password, role) VALUES ('Admin', 'admin@gmail.com', '12345', 'admin')");
+        db.run("INSERT INTO users (name, email, password, role) VALUES ('Teacher1', 'teacher@gmail.com', '12345', 'teacher')");
+        db.run("INSERT INTO users (name, email, password, role) VALUES ('Student1', 'student@gmail.com', '12345', 'student')");
+        db.run("INSERT INTO users (name, email, password, role) VALUES ('Parent1', 'parent@gmail.com', '12345', 'parent')");
+        console.log("✅ Default users created");
+      }
+    });
+  });
+}
 
 
 
